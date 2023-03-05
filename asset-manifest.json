@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/yeahlolnice.com/static/css/main.c9f80ef0.css",
+    "main.js": "/yeahlolnice.com/static/js/main.ecfa77e6.js",
+    "index.html": "/yeahlolnice.com/index.html",
+    "main.c9f80ef0.css.map": "/yeahlolnice.com/static/css/main.c9f80ef0.css.map",
+    "main.ecfa77e6.js.map": "/yeahlolnice.com/static/js/main.ecfa77e6.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c9f80ef0.css",
+    "static/js/main.ecfa77e6.js"
+  ]
+}
