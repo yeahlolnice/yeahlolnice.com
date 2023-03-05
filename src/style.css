@@ -95,55 +95,52 @@ then display a button in the top left corner
   height: 50px;
   width: 250px;
   position: relative;
-  top: 40px;
+  top: 80px;
   z-index: -100;
   opacity: 10%;
 }
 
-.loading-cube {
+.loading-cube1 {
   height: 50px;
   width: 50px;
   background-color:deepskyblue;
-  animation: loadingCube1 6s linear infinite;
-  display: absolute;
+  animation: loadingCube1 4s linear infinite;
+  position: relative;
+  left: 30%;
   border-radius: 15%;
 }
 .loading-cube2 {
   height: 50px;
   width: 50px;
   background-color:gray;
-  animation: loadingCube2 6s linear infinite;
-  position: absolute;
-  left: 90px;
+  animation: loadingCube2 4s linear infinite;
+  position: relative;
+  left: 45%;
   border-radius: 15%;
 }
 .loading-cube3 {
   height: 50px;
   width: 50px;
   background-color:coral;
-  animation: loadingCube3 6s linear infinite;
-  position: absolute;
-  left: 222px;
+  animation: loadingCube3 4s linear infinite;
+  position: relative;
+  left: 60%;
   border-radius: 15%;
 }
 @keyframes loadingCube1 {
   0%{
     position: absolute;
-    top: 50px;
+    top: 100px;
     
-  }
-  25% {
-    position: absolute;
-    top: 50px;
   }
   50%{
     position: absolute;
-    top: 100px;
+    top: 50px;
 
   }
   100%{
     position: absolute;
-    top: 50px;
+    top: 100px;
     rotate: 900deg;
   }
 
@@ -154,18 +151,14 @@ then display a button in the top left corner
     top: 50px;
     
   }
-  25% {
-    position: absolute;
-    top: 100px;
-  }
   50%{
     position: absolute;
-    top: 50px;
+    top: 100px;
 
   }
   100%{
     position: absolute;
-    top: 100px;
+    top: 50px;
     rotate: 900deg;
   }
 
@@ -173,12 +166,8 @@ then display a button in the top left corner
 @keyframes loadingCube3 {
   0%{
     position: absolute;
-    top: 50px;
-    
-  }
-  25% {
-    position: absolute;
     top: 100px;
+    
   }
   50%{
     position: absolute;

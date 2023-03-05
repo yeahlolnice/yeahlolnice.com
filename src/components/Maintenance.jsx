@@ -13,7 +13,7 @@ function maintenance() {
                 </Row>
                 <Row className="maintenanceLoad">
                     <Col style={{display: "flex",alignItems: "end", justifyContent: "center"}}>
-                        <div className="loading-cube"></div>
+                        <div className="loading-cube1"></div>
                         <div className="loading-cube2"></div>
                         <div className="loading-cube3"></div>
                         <div className="shadow"></div>
