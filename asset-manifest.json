@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/yeahlolnice.com/static/css/main.ce611262.css",
-    "main.js": "/yeahlolnice.com/static/js/main.dc397a2b.js",
+    "main.js": "/yeahlolnice.com/static/js/main.7be27fed.js",
     "index.html": "/yeahlolnice.com/index.html",
     "main.ce611262.css.map": "/yeahlolnice.com/static/css/main.ce611262.css.map",
-    "main.dc397a2b.js.map": "/yeahlolnice.com/static/js/main.dc397a2b.js.map"
+    "main.7be27fed.js.map": "/yeahlolnice.com/static/js/main.7be27fed.js.map"
   },
   "entrypoints": [
     "static/css/main.ce611262.css",
-    "static/js/main.dc397a2b.js"
+    "static/js/main.7be27fed.js"
   ]
 }
