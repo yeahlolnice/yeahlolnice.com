@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trivia Night | yeahlolnice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/content/style.css" />
+  <link rel="stylesheet" href="/games/shared/games.css" />
+  <style>
+    .qbox { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 34px; position: relative; overflow: hidden; }
+    .qmeta { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .cat { color: var(--pc); }
+    .question { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(1.5rem, 3.4vw, 2.4rem); line-height: 1.15; letter-spacing: -0.02em; margin: 22px 0 28px; min-height: 2.3em; }
+    .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+    @media (max-width: 640px) { .answers { grid-template-columns: 1fr; } .qbox { padding: 22px; } }
+    .ans {
+      text-align: left; font-family: 'DM Mono', monospace; font-size: 15px; color: var(--text);
+      background: var(--surface2); border: 1px solid var(--border); padding: 18px 20px; cursor: pointer;
+      display: flex; gap: 14px; align-items: center; transition: border-color .2s, background .2s;
+    }
+    .ans:hover:not(:disabled) { border-color: var(--pc); }
+    .ans .k { font-size: 10px; color: var(--muted); border: 1px solid var(--border); border-bottom-width: 2px; padding: 2px 7px; border-radius: 2px; flex: none; }
+    .ans:disabled { cursor: default; }
+    .ans.right { background: rgba(200,240,75,.2); border-color: var(--accent); color: var(--accent); }
+    .ans.right::after { content: '✓'; margin-left: auto; }
+    .ans.wrong { background: rgba(240,75,138,.2); border-color: var(--accent2); color: var(--accent2); }
+    .ans.wrong::after { content: '✗'; margin-left: auto; }
+    .ans.dim { opacity: .4; }
+    .timer { position: absolute; left: 0; top: 0; height: 3px; background: var(--pc); width: 100%; transform-origin: left; }
+    .clock { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; color: var(--pc); }
+    .clock.low { color: var(--accent2); }
+    .feedback { min-height: 64px; margin-top: 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .feedback .msg { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; }
+    .feedback .msg.good { color: var(--accent); } .feedback .msg.bad { color: var(--accent2); }
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <a class="back" href="/games/">← games night</a>
+    <div class="actions"><button class="btn small" id="newGame">new game</button></div>
+  </nav>
+
+  <section class="game-head">
+    <h1>trivia <span>night</span></h1>
+    <p class="desc">Everyone gets their own question each turn. <strong>100 points</strong> for a right answer, plus up to 50 bonus for answering fast. Keys <span class="kbd">1</span>–<span class="kbd">4</span> work too.</p>
+  </section>
+
+  <main class="stage">
+    <div id="scorebar"></div>
+    <div class="qbox" id="qbox">
+      <div class="timer" id="timer"></div>
+      <div class="qmeta">
+        <span class="label" id="meta"></span>
+        <span class="clock" id="clock"></span>
+      </div>
+      <div class="question" id="question">Get your brains ready…</div>
+      <div class="answers" id="answers"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  </main>
+
+  <footer>made with too much coffee · yeahlolnice.com</footer>
+
+  <script src="/games/shared/games.js"></script>
+  <script src="questions.js"></script>
+  <script>
+  (() => {
+    const $ = id => document.getElementById(id);
+    const SEEN_KEY = 'yln.trivia.seen';
+    let players = [], scores = [], deck = [], round = 0, rounds = 10, turn = 0, timeLimit = 15;
+    let category = 'all';
+    let current = null, answered = true, tStart = 0, tick = null;
+
+    function buildDeck(cat) {
+      const pool = QUESTIONS.map((q, i) => ({ ...q, id: i })).filter(q => cat === 'all' || q.c === cat);
+      // prefer questions this browser hasn't seen yet
+      let seen = new Set(YLN.load(SEEN_KEY, []));
+      let fresh = pool.filter(q => !seen.has(q.id));
+      if (fresh.length < rounds * players.length) { YLN.save(SEEN_KEY, []); fresh = pool; seen = new Set(); }
+      return YLN.shuffle(fresh);
+    }
+    function markSeen(id) { const s = YLN.load(SEEN_KEY, []); s.push(id); YLN.save(SEEN_KEY, s); }
+
+    function bar() {
+      YLN.scorebar($('scorebar'), players, { active: turn, score: (p, i) => `${scores[i]} pts` });
+    }
+
+    async function nextTurn() {
+      if (turn >= players.length) { turn = 0; round++; }
+      if (round >= rounds) return finish();
+      if (!deck.length) deck = buildDeck(category);
+      current = deck.pop();
+      markSeen(current.id);
+      const p = players[turn];
+      bar();
+      document.documentElement.style.setProperty('--pc', p.color);
+      $('question').textContent = '…';
+      $('answers').innerHTML = ''; $('feedback').innerHTML = ''; $('clock').textContent = '';
+      $('meta').innerHTML = `round ${round + 1} of ${rounds}`;
+      if (players.length > 1) await YLN.handoff(p, { title: 'your turn', sub: `round ${round + 1} of ${rounds} · <span style="color:${p.color}">${YLN.esc(current.c)}</span>`, button: 'show my question' });
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const p = players[turn];
+      const opts = YLN.shuffle([...current.a]);
+      $('meta').innerHTML = `round ${round + 1} of ${rounds} · <span class="cat">${YLN.esc(current.c)}</span> · <span style="color:${p.color}">${YLN.esc(p.name)}</span>`;
+      $('question').textContent = current.q;
+      $('answers').innerHTML = opts.map((o, i) => `<button class="ans" data-a="${YLN.esc(o)}"><span class="k">${i + 1}</span><span>${YLN.esc(o)}</span></button>`).join('');
+      answered = false;
+      tStart = performance.now();
+      clearInterval(tick);
+      const t = $('timer');
+      t.style.transition = 'none'; t.style.transform = 'scaleX(1)';
+      if (timeLimit) {
+        requestAnimationFrame(() => requestAnimationFrame(() => { t.style.transition = `transform ${timeLimit}s linear`; t.style.transform = 'scaleX(0)'; }));
+        tick = setInterval(() => {
+          const left = Math.max(0, timeLimit - (performance.now() - tStart) / 1000);
+          $('clock').textContent = Math.ceil(left);
+          $('clock').classList.toggle('low', left <= 5);
+          if (left <= 0) answer(null);
+        }, 100);
+      } else t.style.transform = 'scaleX(0)';
+    }
+
+    function answer(choice) {
+      if (answered) return;
+      answered = true;
+      clearInterval(tick);
+      const t = $('timer'); const now = getComputedStyle(t).transform; t.style.transition = 'none'; t.style.transform = now;
+      const correct = current.a[0];
+      const ok = choice === correct;
+      const secs = (performance.now() - tStart) / 1000;
+      const bonus = ok && timeLimit ? Math.round(50 * Math.max(0, (timeLimit - secs) / timeLimit)) : 0;
+      const pts = ok ? 100 + bonus : 0;
+      scores[turn] += pts;
+      document.querySelectorAll('.ans').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.a === correct) b.classList.add('right');
+        else if (b.dataset.a === choice) b.classList.add('wrong');
+        else b.classList.add('dim');
+      });
+      const nextP = turn + 1 < players.length ? players[turn + 1] : (round + 1 < rounds ? players[0] : null);
+      $('feedback').innerHTML = `
+        <span class="msg ${ok ? 'good' : 'bad'}">${ok ? `correct! +${pts}` : choice === null ? "time's up" : 'nope'}</span>
+        ${!ok ? `<span class="muted" style="font-size:12px">it was <b style="color:var(--text);font-weight:400">${YLN.esc(correct)}</b></span>` : bonus ? `<span class="muted" style="font-size:12px">${secs.toFixed(1)}s · +${bonus} speed bonus</span>` : ''}
+        <span class="spacer"></span>
+        <button class="btn accent" id="next">${nextP ? (players.length > 1 ? `pass to ${YLN.esc(nextP.name)} →` : 'next question →') : 'final scores →'}</button>`;
+      bar();
+      $('next').onclick = () => { turn++; nextTurn(); };
+      $('next').focus();
+    }
+
+    $('answers').addEventListener('click', e => { const b = e.target.closest('.ans'); if (b) answer(b.dataset.a); });
+    document.addEventListener('keydown', e => {
+      if (document.querySelector('.overlay')) return;
+      if (!answered && /^[1-4]$/.test(e.key)) { const b = document.querySelectorAll('.ans')[+e.key - 1]; if (b) answer(b.dataset.a); }
+    });
+
+    function finish() {
+      clearInterval(tick);
+      $('question').textContent = 'That\'s a wrap.';
+      $('answers').innerHTML = ''; $('feedback').innerHTML = ''; $('clock').textContent = ''; $('meta').textContent = '';
+      turn = -1; bar();
+      YLN.podium('trivia', players.map((p, i) => ({ player: p, score: scores[i], display: `${scores[i]} pts` })), { onAgain: start });
+    }
+
+    async function start() {
+      clearInterval(tick);
+      const cats = [...new Set(QUESTIONS.map(q => q.c))];
+      const { players: ps, settings } = await YLN.setupPlayers({
+        game: 'trivia', min: 1, max: 8,
+        options: [
+          { key: 'rounds', label: 'questions each', value: 5, choices: [{ value: 3, label: '3' }, { value: 5, label: '5' }, { value: 10, label: '10' }] },
+          { key: 'time', label: 'timer', value: 15, choices: [{ value: 10, label: '10s' }, { value: 15, label: '15s' }, { value: 30, label: '30s' }, { value: 0, label: 'off' }] },
+          { key: 'cat', label: 'category', value: 'all', choices: [{ value: 'all', label: 'mix of everything' }, ...cats.map(c => ({ value: c, label: c }))] },
+        ],
+      });
+      players = ps; scores = ps.map(() => 0);
+      rounds = settings.rounds; timeLimit = settings.time;
+      round = 0; turn = 0;
+      category = settings.cat;
+      deck = buildDeck(category);
+      nextTurn();
+    }
+    $('newGame').onclick = start;
+    start();
+  })();
+  </script>
+</body>
+</html>

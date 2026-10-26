@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS Paint | yeahlolnice</title>
+    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="painter">
+        <canvas width="1000px" height="600px" id="paint"></canvas>
+        <div id="options">
+            <button class="btn btn-danger" onclick="Clear()">Clear</button>
+            <div class="sliders">
+                <div class="slidecontainer">
+                    Red:
+                    <input type="range" min="0" max="255" value="0" class="slider" id="redSlider">
+                    <span id="redVal"></span>
+                </div>
+                <div class="slidecontainer">
+                    Green:
+                    <input type="range" min="0" max="255" value="0" class="slider" id="greenSlider">
+                    <span id="greenVal"></span>
+                </div>
+                <div class="slidecontainer">
+                    Blue:
+                    <input type="range" min="0" max="255" value="0" class="slider" id="blueSlider">
+                    <span id="blueVal"></span>
+                </div> 
+            </div>
+        </div>
+    </div>
+    <script defer src="main.js"></script>
+</body>
+</html>

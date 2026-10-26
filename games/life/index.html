@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game of Life | yeahlolnice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/content/style.css" />
+  <link rel="stylesheet" href="/games/shared/games.css" />
+  <style>
+    .modes { display: flex; gap: 2px; margin-bottom: 18px; }
+    .modes .btn { flex: 1; padding: 14px; }
+    .boardwrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; }
+    canvas#life { width: 100%; display: block; cursor: crosshair; image-rendering: pixelated; touch-action: none; }
+    .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 14px 0; }
+    .stats { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+    .stats b { color: var(--accent); font-weight: 400; }
+    input[type=range] { accent-color: var(--accent); width: 120px; }
+    .patterns { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .note { font-size: 11px; color: var(--muted); line-height: 1.8; margin-top: 10px; }
+    .hidden { display: none !important; }
+    .placing { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; }
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <a class="back" href="/games/">← games night</a>
+  </nav>
+
+  <section class="game-head">
+    <h1>game of <span>life</span></h1>
+    <p class="desc">Conway's 1970 cellular automaton. A live cell with 2 or 3 neighbours survives, a dead cell with exactly 3 comes alive, everything else dies. <strong>That's the whole rulebook.</strong></p>
+  </section>
+
+  <main class="stage">
+    <div class="modes">
+      <button class="btn on" id="modeSandbox">🧪 sandbox</button>
+      <button class="btn" id="modeClash">⚔️ colony clash (2–4 players)</button>
+    </div>
+
+    <div id="clashScore"></div>
+
+    <!-- sandbox controls -->
+    <div id="sandboxBar">
+      <div class="bar">
+        <button class="btn accent" id="play">▶ play<span class="kbd">space</span></button>
+        <button class="btn" id="step">step<span class="kbd">N</span></button>
+        <button class="btn" id="random">random<span class="kbd">R</span></button>
+        <button class="btn" id="clear">clear<span class="kbd">C</span></button>
+        <span class="label" style="margin-left:8px">speed</span><input type="range" id="speed" min="1" max="40" value="12">
+        <span class="spacer"></span>
+        <span class="stats">gen <b id="gen">0</b> · alive <b id="pop">0</b></span>
+      </div>
+      <div class="bar patterns" id="patterns"><span class="label" style="margin-right:6px">stamp</span></div>
+    </div>
+
+    <!-- clash controls -->
+    <div id="clashBar" class="hidden">
+      <div class="bar">
+        <span class="placing" id="clashMsg"></span>
+        <span class="spacer"></span>
+        <span class="stats" id="clashStats"></span>
+        <button class="btn" id="clashUndo">clear my cells</button>
+        <button class="btn accent" id="clashDone">done →</button>
+      </div>
+    </div>
+
+    <div class="boardwrap"><canvas id="life"></canvas></div>
+    <p class="note" id="note">Click or drag to draw cells. Pick a stamp to drop famous patterns. The edges wrap around, so gliders that fly off one side come back on the other.</p>
+  </main>
+
+  <footer>made with too much coffee · yeahlolnice.com</footer>
+
+  <script src="/games/shared/games.js"></script>
+  <script>
+  (() => {
+    const COLS = 96, ROWS = 56, CELL = 10;
+    const canvas = document.getElementById('life');
+    const ctx = canvas.getContext('2d');
+    canvas.width = COLS * CELL; canvas.height = ROWS * CELL;
+    const $ = id => document.getElementById(id);
+
+    let grid = new Uint8Array(COLS * ROWS);   // 0 = dead, 1..4 = alive (owner id in clash, 1 in sandbox)
+    let mode = 'sandbox', running = false, gen = 0, timer = null, stamp = null, hover = null;
+
+    // ── famous patterns (x,y offsets) ──
+    const P = s => s.trim().split('\n').flatMap((row, y) => [...row.trim()].map((c, x) => c === 'O' ? [x, y] : null).filter(Boolean));
+    const PATTERNS = {
+      glider: P(`.O.\n..O\nOOO`),
+      spaceship: P(`.O..O\nO....\nO...O\nOOOO.`),
+      pulsar: P(`..OOO...OOO..\n.............\nO....O.O....O\nO....O.O....O\nO....O.O....O\n..OOO...OOO..\n.............\n..OOO...OOO..\nO....O.O....O\nO....O.O....O\nO....O.O....O\n.............\n..OOO...OOO..`),
+      'glider gun': P(`........................O...........
+                       ......................O.O...........
+                       ............OO......OO............OO
+                       ...........O...O....OO............OO
+                       OO........O.....O...OO..............
+                       OO........O...O.OO....O.O...........
+                       ..........O.....O.......O...........
+                       ...........O...O....................
+                       ............OO......................`),
+      'r-pentomino': P(`.OO\nOO.\n.O.`),
+      acorn: P(`.O.....\n...O...\nOO..OOO`),
+      diehard: P(`......O.\nOO......\n.O...OOO`),
+    };
+
+    const idx = (x, y) => ((y + ROWS) % ROWS) * COLS + ((x + COLS) % COLS);
+
+    // ── simulation ──
+    function step() {
+      const next = new Uint8Array(COLS * ROWS);
+      const nPlayers = clash.players.length;
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          let count = 0; const owners = [];
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            if (!dx && !dy) continue;
+            const v = grid[idx(x + dx, y + dy)];
+            if (v) { count++; if (owners.length < 3) owners.push(v); }
+          }
+          const i = y * COLS + x, me = grid[i];
+          if (me && (count === 2 || count === 3)) next[i] = me;
+          else if (!me && count === 3) next[i] = birthColour(owners, nPlayers);
+        }
+      }
+      grid = next; gen++;
+    }
+    // Immigration / Quad-Life rule: newborn takes the majority colour of its 3 parents.
+    function birthColour([a, b, c], n) {
+      if (mode === 'sandbox') return 1;
+      if (a === b || a === c) return a;
+      if (b === c) return b;
+      if (n === 4) return 10 - a - b - c; // all different → the missing fourth colour
+      return [a, b, c][Math.floor(Math.random() * 3)];
+    }
+
+    // ── drawing ──
+    function colourOf(v) { return mode === 'sandbox' ? '#c8f04b' : clash.players[v - 1].color; }
+    function draw() {
+      ctx.fillStyle = '#0e0e0e';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // clash zones while planting
+      if (mode === 'clash' && clash.phase === 'place') {
+        const z = zone(clash.turn);
+        ctx.fillStyle = clash.players[clash.turn].color + '18';
+        ctx.fillRect(z.x0 * CELL, 0, (z.x1 - z.x0) * CELL, canvas.height);
+        ctx.strokeStyle = clash.players[clash.turn].color + '88';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(z.x0 * CELL + 1, 1, (z.x1 - z.x0) * CELL - 2, canvas.height - 2);
+      }
+      // grid lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = 0; x <= COLS; x++) { ctx.moveTo(x * CELL + .5, 0); ctx.lineTo(x * CELL + .5, canvas.height); }
+      for (let y = 0; y <= ROWS; y++) { ctx.moveTo(0, y * CELL + .5); ctx.lineTo(canvas.width, y * CELL + .5); }
+      ctx.stroke();
+
+      for (let i = 0; i < grid.length; i++) {
+        const v = grid[i];
+        if (!v) continue;
+        if (mode === 'clash' && clash.phase === 'place' && v !== clash.turn + 1) continue; // others are hidden
+        ctx.fillStyle = colourOf(v);
+        ctx.fillRect((i % COLS) * CELL + 1, Math.floor(i / COLS) * CELL + 1, CELL - 1, CELL - 1);
+      }
+      // stamp ghost
+      if (mode === 'sandbox' && stamp && hover) {
+        ctx.fillStyle = 'rgba(240,75,138,0.55)';
+        PATTERNS[stamp].forEach(([dx, dy]) => {
+          const i = idx(hover.x + dx, hover.y + dy);
+          ctx.fillRect((i % COLS) * CELL + 1, Math.floor(i / COLS) * CELL + 1, CELL - 1, CELL - 1);
+        });
+      }
+      updateStats();
+    }
+
+    function updateStats() {
+      if (mode === 'sandbox') {
+        $('gen').textContent = gen;
+        $('pop').textContent = grid.reduce((s, v) => s + (v ? 1 : 0), 0);
+      } else renderClashScore();
+    }
+
+    // ── loop ──
+    function setRunning(on) {
+      running = on;
+      clearInterval(timer);
+      if (on) timer = setInterval(() => { step(); draw(); }, 1000 / +$('speed').value);
+      $('play').innerHTML = on ? '❚❚ pause<span class="kbd">space</span>' : '▶ play<span class="kbd">space</span>';
+    }
+    $('speed').oninput = () => { if (running) setRunning(true); };
+
+    // ── mouse ──
+    function cellAt(e) {
+      const r = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - r.left) / r.width * COLS);
+      const y = Math.floor((e.clientY - r.top) / r.height * ROWS);
+      return (x >= 0 && y >= 0 && x < COLS && y < ROWS) ? { x, y } : null;
+    }
+    let painting = null;
+    canvas.addEventListener('pointerdown', e => {
+      const c = cellAt(e); if (!c) return;
+      if (mode === 'sandbox') {
+        if (stamp) { PATTERNS[stamp].forEach(([dx, dy]) => grid[idx(c.x + dx, c.y + dy)] = 1); draw(); return; }
+        painting = grid[idx(c.x, c.y)] ? 0 : 1;
+        grid[idx(c.x, c.y)] = painting; draw();
+      } else if (clash.phase === 'place') {
+        painting = grid[idx(c.x, c.y)] === clash.turn + 1 ? 0 : clash.turn + 1;
+        plantAt(c);
+      }
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', e => {
+      const c = cellAt(e);
+      hover = c;
+      if (painting !== null && c) {
+        if (mode === 'sandbox') grid[idx(c.x, c.y)] = painting;
+        else if (clash.phase === 'place') plantAt(c);
+      }
+      draw();
+    });
+    canvas.addEventListener('pointerup', () => painting = null);
+    canvas.addEventListener('pointerleave', () => { hover = null; draw(); });
+
+    // ── sandbox buttons ──
+    $('play').onclick = () => setRunning(!running);
+    $('step').onclick = () => { setRunning(false); step(); draw(); };
+    $('clear').onclick = () => { setRunning(false); grid.fill(0); gen = 0; draw(); };
+    $('random').onclick = () => { grid = grid.map(() => Math.random() < 0.22 ? 1 : 0); gen = 0; draw(); };
+    Object.keys(PATTERNS).forEach(name => {
+      const b = document.createElement('button');
+      b.className = 'btn small'; b.textContent = name;
+      b.onclick = () => {
+        stamp = stamp === name ? null : name;
+        document.querySelectorAll('#patterns .btn').forEach(x => x.classList.toggle('on', x.textContent === stamp));
+        canvas.style.cursor = stamp ? 'copy' : 'crosshair';
+      };
+      $('patterns').appendChild(b);
+    });
+    document.addEventListener('keydown', e => {
+      if (mode !== 'sandbox' || document.querySelector('.overlay')) return;
+      const k = e.key.toLowerCase();
+      if (k === ' ') { e.preventDefault(); $('play').click(); }
+      if (k === 'n') $('step').click();
+      if (k === 'c') $('clear').click();
+      if (k === 'r') $('random').click();
+      if (k === 'escape' && stamp) document.querySelector('#patterns .btn.on')?.click();
+    });
+
+    // ── colony clash ──
+    const clash = { players: [], phase: 'idle', turn: 0, cells: 25, gens: 300 };
+    function zone(p) {
+      const w = Math.floor(COLS / clash.players.length);
+      return { x0: p * w, x1: p === clash.players.length - 1 ? COLS : (p + 1) * w };
+    }
+    const countOf = id => grid.reduce((s, v) => s + (v === id ? 1 : 0), 0);
+    function plantAt({ x, y }) {
+      const z = zone(clash.turn), me = clash.turn + 1, i = idx(x, y);
+      if (x < z.x0 || x >= z.x1) return;
+      if (painting === 0) { if (grid[i] === me) grid[i] = 0; }
+      else if (!grid[i]) {
+        if (countOf(me) >= clash.cells) { YLN.toast(`that's all ${clash.cells} cells`); painting = null; return; }
+        grid[i] = me;
+      }
+      draw();
+    }
+    function renderClashScore() {
+      if (mode !== 'clash' || !clash.players.length) { $('clashScore').innerHTML = ''; return; }
+      const hidden = clash.phase === 'place';
+      YLN.scorebar($('clashScore'), clash.players, {
+        active: hidden ? clash.turn : -1,
+        score: (p, i) => hidden ? (i === clash.turn ? `${countOf(i + 1)} / ${clash.cells} planted` : (i < clash.turn ? 'planted ✓' : 'waiting')) : `${countOf(i + 1)} cells`,
+      });
+      if (clash.phase === 'place') {
+        $('clashStats').textContent = `${clash.cells - countOf(clash.turn + 1)} cells left`;
+      } else if (clash.phase === 'run') {
+        $('clashStats').textContent = `generation ${gen} / ${clash.gens}`;
+      }
+    }
+
+    async function startClash() {
+      setRunning(false);
+      const res = await YLN.setupPlayers({
+        game: 'life', min: 2, max: 4, cancel: true,
+        intro: 'Everyone secretly plants cells in their own strip. Then the simulation runs, and newborn cells take the colour of most of their parents. Biggest colony at the end wins.',
+        options: [
+          { key: 'cells', label: 'cells each', value: 25, choices: [{ value: 15, label: '15' }, { value: 25, label: '25' }, { value: 40, label: '40' }] },
+          { key: 'gens', label: 'battle length', value: 300, choices: [{ value: 150, label: '150 gens' }, { value: 300, label: '300 gens' }, { value: 600, label: '600 gens' }] },
+        ],
+      });
+      if (!res) return setMode('sandbox');
+      const { players, settings } = res;
+      Object.assign(clash, { players, cells: settings.cells, gens: settings.gens, turn: 0, phase: 'place' });
+      grid = new Uint8Array(COLS * ROWS); gen = 0;
+      await beginPlacing();
+    }
+    async function beginPlacing() {
+      const p = clash.players[clash.turn];
+      draw();
+      await YLN.handoff(p, { sub: `Plant ${clash.cells} cells in your strip. Everyone else, look away 🙈<br>Tip: patterns that grow (like an r-pentomino) beat scattered dots.` });
+      $('clashMsg').innerHTML = `<span style="color:${p.color}">${YLN.esc(p.name)}</span> is planting`;
+      $('clashDone').textContent = clash.turn === clash.players.length - 1 ? 'done → reveal' : 'done → next player';
+      $('clashDone').disabled = false; $('clashUndo').disabled = false;
+      draw();
+    }
+    $('clashUndo').onclick = () => { if (clash.phase !== 'place') return; const me = clash.turn + 1; grid = grid.map(v => v === me ? 0 : v); draw(); };
+    $('clashDone').onclick = async () => {
+      if (clash.phase === 'place') {
+        if (countOf(clash.turn + 1) === 0) { YLN.toast('plant at least one cell'); return; }
+        if (clash.turn < clash.players.length - 1) { clash.turn++; return beginPlacing(); }
+        clash.phase = 'reveal';
+        $('clashMsg').textContent = 'all colonies planted';
+        $('clashDone').textContent = '⚔️ start the battle';
+        $('clashUndo').disabled = true;
+        draw();
+      } else if (clash.phase === 'reveal') {
+        clash.phase = 'run';
+        $('clashMsg').textContent = 'battle in progress…';
+        $('clashDone').disabled = true;
+        $('clashDone').textContent = 'running…';
+        runBattle();
+      } else if (clash.phase === 'over') {
+        startClash();
+      }
+    };
+    function runBattle() {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        step(); draw();
+        const alive = clash.players.filter((_, i) => countOf(i + 1) > 0).length;
+        if (gen >= clash.gens || alive <= 1 && gen > 30 || alive === 0) { clearInterval(timer); endBattle(); }
+      }, 1000 / 30);
+    }
+    function endBattle() {
+      clash.phase = 'over';
+      $('clashMsg').textContent = `finished after ${gen} generations`;
+      $('clashDone').textContent = 'rematch';
+      $('clashDone').disabled = false;
+      draw();
+      if (clash.players.every((_, i) => countOf(i + 1) === 0)) {
+        $('clashMsg').textContent = `everyone went extinct by gen ${gen} 💀`;
+        YLN.toast('Total extinction. Nobody wins. Try planting clumps instead of single dots.', 4500);
+        return;
+      }
+      setTimeout(() => YLN.podium('life', clash.players.map((p, i) => ({ player: p, score: countOf(i + 1), display: `${countOf(i + 1)} cells` })), { onAgain: startClash }), 700);
+    }
+
+    // ── mode switch ──
+    function setMode(m) {
+      setRunning(false); clearInterval(timer);
+      mode = m;
+      $('modeSandbox').classList.toggle('on', m === 'sandbox');
+      $('modeClash').classList.toggle('on', m === 'clash');
+      $('sandboxBar').classList.toggle('hidden', m !== 'sandbox');
+      $('clashBar').classList.toggle('hidden', m !== 'clash');
+      $('note').textContent = m === 'sandbox'
+        ? 'Click or drag to draw cells. Pick a stamp to drop famous patterns. The edges wrap around, so gliders that fly off one side come back on the other.'
+        : 'Colony Clash uses the "Immigration" variant: a newborn cell takes the colour most of its three parents share (with 4 players, three different parents make the fourth colour). Survivors keep their colour.';
+      grid = new Uint8Array(COLS * ROWS); gen = 0;
+      if (m === 'clash') startClash(); else { clash.players = []; renderClashScore(); seed(); }
+      draw();
+    }
+    $('modeSandbox').onclick = () => setMode('sandbox');
+    $('modeClash').onclick = () => setMode('clash');
+
+    // something nice on first load: a glider gun
+    function seed() { PATTERNS['glider gun'].forEach(([x, y]) => grid[idx(x + 4, y + 4)] = 1); }
+    seed(); draw();
+  })();
+  </script>
+</body>
+</html>

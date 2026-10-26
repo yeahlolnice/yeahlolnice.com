@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
+  <title>NahGPT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./content/styles.css" />
+</head>
+<body>
+
+<div class="chat-root">
+
+  <!-- Header -->
+  <header class="chat-header">
+    <div class="model-dot" style="background:#4a9f6e;box-shadow:0 0 6px #4a9f6e55;"></div>
+    <span class="model-name">NahGPT</span>
+    <span class="home-span"><a class="home-link" href="/">yeahlolnice.com</a></span>
+    <span class="model-badge" style="color:#4a9f6e;border-color:#1e3d2e;background:#0f2019;">● online · ready to help</span>
+  </header>
+
+    <!-- Typing indicator (moved into scroll area by JS when active) -->
+  <div class="typing-wrap" id="typing-wrap" aria-hidden="true">
+    <div class="typing-indicator">
+      <div class="typing-avatar">😑</div>
+      <div class="typing-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <main class="messages" id="messages" aria-live="polite" aria-label="Chat messages">
+    <div class="messages-inner" id="messages-inner">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-logo">✨</div>
+        <h1 class="empty-heading">What can I help with?</h1>
+        <p class="empty-sub">e.g "Write a sci-fi novel about X", "How to make my wifes boyfriend move out?" or "Explain recursive epistemic uncertainty?"</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Input -->
+  <footer class="input-area">
+    <div class="input-inner">
+      <div class="input-row">
+        <textarea
+          id="prompt-input"
+          placeholder="Ask me anything — seriously, anything at all..."
+          rows="1"
+          aria-label="Message input"
+        ></textarea>
+        <button id="send-btn" aria-label="Send message">&#x2191;</button>
+      </div>
+      <p class="hint">nahgpt · no task too big · results guaranteed*</p>
+    </div>
+  </footer>
+
+</div>
+
+<script src="content/chat.js"></script>
+</body>
+</html>

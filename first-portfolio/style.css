@@ -1,0 +1,86 @@
+*{
+    padding: 0;  /*style on everything*/
+    margin: 0;
+    box-sizing: border-box;
+    font-family: 'Roboto', 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+body{
+    display: grid;
+    grid-template-columns: 100%;
+    grid-template-rows: 120px auto 60px;
+    grid-template-areas: 
+        "header"
+        "section"
+        "footer"
+        ;
+    background-image: url(./images/circuitwallpaper.jpg);
+    background-size: cover;
+    height: 100vh;
+
+}
+header{
+    grid-area: header;
+}
+section{
+    grid-area: section;
+}
+                                        /* nav section */
+
+.home-link-wrapper {
+    padding: .25rem 0;
+    text-align: center;
+    background-color: rgb(216, 83, 7);
+}
+.home-link {
+    color: white;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: 1s;
+}
+
+.navbar{
+    display: inline-block;
+}
+/* nav links display inline-block so its easier to click */
+.navlink{
+    display: inline-block;
+    padding: 10px 5px;
+    margin-top: 20px;
+}
+.navlink a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.5rem;
+    padding: 5px;
+    transition: 0.5s;
+}  
+/* nav link animations */
+.navlink a:hover{
+    font-size: 2rem;
+}
+.logo{
+    float: right;
+    color: white;
+    font-size: 2rem;
+    text-shadow: 0px 3px 5px black;
+}
+hr{
+    border: 0;
+    height: 2px;
+    background: #333;
+    background-image: linear-gradient(to right, #ccc, #333, #ccc);
+    
+}
+/* the footer across each page */
+footer{
+    width: 100%;
+    grid-area: footer;
+    
+}
+.footerbox{
+    display: block;
+    color: white;
+    text-align: center;
+    box-shadow: 0 -5px 5px -5px whitesmoke;
+    padding: 15px;  
+}

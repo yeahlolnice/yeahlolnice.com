@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blackjack | yeahlolnice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/content/style.css" />
+  <link rel="stylesheet" href="/games/shared/games.css" />
+  <style>
+    .table {
+      background: radial-gradient(ellipse at 50% 0%, var(--felt2), var(--felt) 70%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .table::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .dealer { text-align: center; position: relative; min-height: 170px; }
+    .dealer .label { margin-bottom: 12px; }
+    .rule { text-align: center; font-size: 10px; letter-spacing: .25em; text-transform: uppercase; color: rgba(200,240,75,.45); margin: 18px 0 22px; position: relative; }
+    .hand { display: flex; justify-content: center; min-height: 104px; }
+    .total { margin-top: 10px; font-size: 12px; color: var(--muted); min-height: 18px; }
+    .total b { color: var(--text); font-weight: 400; }
+
+    /* playing cards */
+    .pc {
+      width: 70px; height: 100px;
+      background: #f4f1e8;
+      border-radius: 6px;
+      color: #151515;
+      position: relative;
+      margin-left: -26px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.5);
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      flex: none;
+    }
+    .pc:first-child { margin-left: 0; }
+    .pc.fresh { animation: dealIn .3s ease both; }
+    .pc.red { color: #d42a5f; }
+    .pc .tl { position: absolute; top: 6px; left: 7px; font-size: 16px; line-height: 1; text-align: center; }
+    .pc .tl small { display: block; font-size: 14px; }
+    .pc .mid { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+    .pc.back {
+      background: repeating-linear-gradient(45deg, #1f1f1f 0 6px, #262626 6px 12px);
+      border: 2px solid var(--accent2);
+    }
+    .pc.back > * { display: none; }
+    @keyframes dealIn { from { opacity: 0; transform: translateY(-30px) rotate(-6deg); } to { opacity: 1; transform: none; } }
+    .seats .pc { width: 56px; height: 80px; margin-left: -22px; }
+    .seats .pc:first-child { margin-left: 0; }
+    .seats .pc .mid { font-size: 24px; }
+    .seats .pc .tl { font-size: 13px; }
+    .seats .pc .tl small { font-size: 11px; }
+    .seats .hand { min-height: 84px; justify-content: flex-start; }
+
+    .seats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 2px; position: relative; }
+    .seat {
+      background: rgba(14,14,14,.7);
+      border: 1px solid var(--border);
+      padding: 14px;
+      position: relative;
+      transition: border-color .25s, transform .25s;
+    }
+    .seat::before { content: ''; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: var(--pc); }
+    .seat.active { border-color: var(--pc); transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+    .seat.out { opacity: .3; }
+    .seat .nm { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; color: var(--pc); }
+    .seat .chips { font-size: 11px; color: var(--muted); margin: 4px 0 10px; }
+    .seat .chips b { color: var(--gold); font-weight: 400; }
+    .seat .bet { font-size: 11px; margin-bottom: 10px; color: var(--text); min-height: 16px; }
+    .seat .status { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; margin-top: 8px; min-height: 14px; }
+    .status.win { color: var(--accent); } .status.lose { color: var(--accent2); } .status.push { color: var(--muted); }
+    .chipbtns { display: flex; gap: 4px; flex-wrap: wrap; }
+    .chip {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 3px dashed rgba(255,255,255,.55);
+      font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700;
+      color: #0e0e0e; cursor: pointer; flex: none;
+      transition: transform .1s;
+    }
+    .chip:hover:not(:disabled) { transform: translateY(-2px); }
+    .chip:disabled { opacity: .25; cursor: not-allowed; }
+    .chip.c10 { background: #e8e8e0; } .chip.c25 { background: var(--accent2); } .chip.c100 { background: var(--accent); } .chip.c500 { background: var(--gold); }
+
+    .controls { display: flex; gap: 8px; justify-content: center; margin-top: 22px; flex-wrap: wrap; min-height: 48px; }
+    .info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+    .info .label b { color: var(--text); font-weight: 400; }
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <a class="back" href="/games/">← games night</a>
+    <div class="actions"><button class="btn small" id="newGame">new game</button><button class="btn small pink" id="endNow">cash out now</button></div>
+  </nav>
+
+  <section class="game-head">
+    <h1>black<span>jack</span></h1>
+    <p class="desc">Everyone plays the house. Blackjack pays <strong>3:2</strong>, dealer stands on all 17s. Most chips after the last hand wins.</p>
+  </section>
+
+  <main class="stage">
+    <div class="info">
+      <span class="label" id="handNo"></span>
+      <span class="label">shortcuts: <span class="kbd">H</span> hit <span class="kbd">S</span> stand <span class="kbd">D</span> double</span>
+    </div>
+    <div class="table">
+      <div class="dealer">
+        <div class="label">dealer</div>
+        <div class="hand" id="dealerHand"></div>
+        <div class="total" id="dealerTotal"></div>
+      </div>
+      <div class="rule">— blackjack pays 3 to 2 · dealer must stand on 17 —</div>
+      <div class="seats" id="seats"></div>
+      <div class="controls" id="controls"></div>
+    </div>
+  </main>
+
+  <footer>made with too much coffee · yeahlolnice.com</footer>
+
+  <script src="/games/shared/games.js"></script>
+  <script>
+  (() => {
+    const SUITS = ['♠', '♥', '♦', '♣'];
+    const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const START = 1000, MIN_BET = 10;
+    const CHIPS = [10, 25, 100, 500];
+
+    let players = [], dealer = [], shoe = [], phase = 'bet', turn = -1, hand = 0, totalHands = 10, busy = false;
+
+    const $ = id => document.getElementById(id);
+
+    function newShoe() {
+      shoe = [];
+      for (let d = 0; d < 6; d++) for (const s of SUITS) for (const r of RANKS) shoe.push({ r, s });
+      YLN.shuffle(shoe);
+    }
+    function draw(faceDown = false) {
+      if (shoe.length < 20) { newShoe(); YLN.toast('🔀 fresh shoe shuffled'); }
+      return { ...shoe.pop(), down: faceDown, fresh: true };
+    }
+    function value(cards) {
+      let t = 0, aces = 0;
+      for (const c of cards) {
+        if (c.down) continue;
+        if (c.r === 'A') { t += 11; aces++; }
+        else if ('JQK'.includes(c.r)) t += 10;
+        else t += +c.r;
+      }
+      while (t > 21 && aces) { t -= 10; aces--; }
+      return { t, soft: aces > 0 };
+    }
+    const isBJ = cards => cards.length === 2 && value(cards).t === 21;
+
+    function cardHTML(c) {
+      const red = c.s === '♥' || c.s === '♦';
+      const fresh = c.fresh; c.fresh = false; // only animate a card the first time it's drawn
+      return `<div class="pc ${red ? 'red' : ''} ${c.down ? 'back' : ''} ${fresh ? 'fresh' : ''}"><div class="tl">${c.r}<small>${c.s}</small></div><div class="mid">${c.s}</div></div>`;
+    }
+    const totalText = cards => {
+      if (!cards.length) return '';
+      const v = value(cards);
+      if (isBJ(cards) && !cards.some(c => c.down)) return '<b>blackjack!</b>';
+      return `<b>${v.t}</b>${v.soft && v.t < 21 ? ' soft' : ''}${v.t > 21 ? ' — bust' : ''}`;
+    };
+
+    // ── render ──
+    function render() {
+      $('handNo').innerHTML = `hand <b>${Math.min(phase === 'bet' ? hand + 1 : hand, totalHands)}</b> of <b>${totalHands}</b>`;
+      $('dealerHand').innerHTML = dealer.map(cardHTML).join('');
+      $('dealerTotal').innerHTML = totalText(dealer);
+
+      $('seats').innerHTML = players.map((p, i) => {
+        let body = '';
+        if (phase === 'bet' && !p.out) {
+          body = `<div class="chipbtns">${CHIPS.map(c => `<button class="chip c${c}" data-p="${i}" data-c="${c}" ${p.bet + c > p.chips ? 'disabled' : ''}>${c}</button>`).join('')}</div>
+                  <div class="row" style="margin-top:8px;gap:4px"><button class="btn small" data-clear="${i}">clear</button><button class="btn small" data-allin="${i}">all in</button><button class="btn small" data-same="${i}" ${p.lastBet && p.lastBet <= p.chips ? '' : 'disabled'}>same</button></div>`;
+        } else {
+          body = `<div class="hand">${p.cards.map(cardHTML).join('')}</div><div class="total">${totalText(p.cards)}</div>`;
+        }
+        return `<div class="seat ${phase === 'play' && i === turn ? 'active' : ''} ${p.out ? 'out' : ''}" style="--pc:${p.color}">
+          <div class="nm">${YLN.esc(p.name)}</div>
+          <div class="chips">chips <b>${p.chips.toLocaleString()}</b></div>
+          <div class="bet">${p.out ? 'busted out 💀' : p.bet ? `bet ${p.bet}${p.doubled ? ' (doubled)' : ''}` : (phase === 'bet' ? 'place a bet…' : '')}</div>
+          ${body}
+          <div class="status ${p.resultCls || ''}">${p.result || ''}</div>
+        </div>`;
+      }).join('');
+
+      // controls
+      const c = $('controls');
+      if (phase === 'bet') {
+        const ready = players.filter(p => !p.out).every(p => p.bet >= MIN_BET);
+        c.innerHTML = `<button class="btn accent big" id="deal" ${ready ? '' : 'disabled'}>deal →</button>`;
+        if (!ready) c.innerHTML += `<span class="label" style="align-self:center">everyone bets at least ${MIN_BET}</span>`;
+        $('deal').onclick = deal;
+      } else if (phase === 'play' && turn >= 0) {
+        const p = players[turn];
+        const canDouble = p.cards.length === 2 && p.chips >= p.bet * 2;
+        c.innerHTML = `
+          <span class="label" style="align-self:center;color:${p.color}">${YLN.esc(p.name)}'s turn</span>
+          <button class="btn accent big" data-act="hit">hit<span class="kbd">H</span></button>
+          <button class="btn big" data-act="stand">stand<span class="kbd">S</span></button>
+          <button class="btn big" data-act="double" ${canDouble ? '' : 'disabled'}>double<span class="kbd">D</span></button>`;
+      } else if (phase === 'done') {
+        const last = hand >= totalHands || players.every(p => p.out || p.chips < MIN_BET);
+        c.innerHTML = `<button class="btn accent big" id="next">${last ? 'final results →' : 'next hand →'}</button>`;
+        $('next').onclick = last ? finish : nextHand;
+      } else c.innerHTML = '';
+    }
+
+    // ── betting ──
+    $('seats').addEventListener('click', e => {
+      if (phase !== 'bet') return;
+      const t = e.target.closest('button'); if (!t) return;
+      if (t.dataset.c) { const p = players[+t.dataset.p]; p.bet = Math.min(p.chips, p.bet + +t.dataset.c); }
+      if (t.dataset.clear) players[+t.dataset.clear].bet = 0;
+      if (t.dataset.allin) { const p = players[+t.dataset.allin]; p.bet = p.chips; }
+      if (t.dataset.same) { const p = players[+t.dataset.same]; p.bet = Math.min(p.chips, p.lastBet); }
+      render();
+    });
+
+    async function deal() {
+      if (busy) return; busy = true;
+      phase = 'dealing';
+      hand++;
+      dealer = [];
+      const live = players.filter(p => !p.out);
+      live.forEach(p => { p.cards = []; p.lastBet = p.bet; p.doubled = false; p.done = false; });
+      render();
+      for (let round = 0; round < 2; round++) {
+        for (const p of live) { p.cards.push(draw()); render(); await YLN.sleep(220); }
+        dealer.push(draw(round === 1)); render(); await YLN.sleep(220);
+      }
+      busy = false;
+      // dealer peeks for blackjack
+      const peek = [dealer[0], { ...dealer[1], down: false }];
+      if (isBJ(peek)) {
+        dealer[1].down = false;
+        YLN.toast('dealer has blackjack 😬');
+        return settle();
+      }
+      live.forEach(p => { if (isBJ(p.cards)) { p.done = true; p.result = 'blackjack!'; p.resultCls = 'win'; } });
+      phase = 'play';
+      turn = -1;
+      advance();
+    }
+
+    function advance() {
+      do { turn++; } while (turn < players.length && (players[turn].out || players[turn].done));
+      if (turn >= players.length) { turn = -1; return dealerPlay(); }
+      render();
+    }
+
+    function act(a) {
+      if (phase !== 'play' || turn < 0 || busy) return;
+      const p = players[turn];
+      if (a === 'hit') {
+        p.cards.push(draw());
+        const v = value(p.cards).t;
+        if (v > 21) { p.done = true; p.result = 'bust'; p.resultCls = 'lose'; render(); busy = true; setTimeout(() => { busy = false; advance(); }, 650); return; }
+        if (v === 21) { p.done = true; render(); busy = true; setTimeout(() => { busy = false; advance(); }, 450); return; }
+        render();
+      } else if (a === 'stand') {
+        p.done = true; advance();
+      } else if (a === 'double') {
+        if (p.cards.length !== 2 || p.chips < p.bet * 2) return;
+        p.bet *= 2; p.doubled = true;
+        p.cards.push(draw());
+        p.done = true;
+        if (value(p.cards).t > 21) { p.result = 'bust'; p.resultCls = 'lose'; }
+        render(); busy = true; setTimeout(() => { busy = false; advance(); }, 650);
+      }
+    }
+    $('controls').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) act(b.dataset.act); });
+    document.addEventListener('keydown', e => {
+      if (document.querySelector('.overlay')) return;
+      const k = e.key.toLowerCase();
+      if (k === 'h') act('hit'); if (k === 's') act('stand'); if (k === 'd') act('double');
+    });
+
+    async function dealerPlay() {
+      phase = 'dealer'; busy = true;
+      dealer[1].down = false; render(); await YLN.sleep(500);
+      const anyAlive = players.some(p => !p.out && value(p.cards).t <= 21 && !isBJ(p.cards));
+      if (anyAlive) {
+        while (value(dealer).t < 17) { dealer.push(draw()); render(); await YLN.sleep(550); }
+      }
+      busy = false;
+      settle();
+    }
+
+    function settle() {
+      const d = value(dealer).t, dBJ = isBJ(dealer);
+      players.forEach(p => {
+        if (p.out) return;
+        const v = value(p.cards).t, bj = isBJ(p.cards);
+        let delta;
+        if (v > 21) delta = -p.bet;
+        else if (bj && dBJ) delta = 0;
+        else if (bj) delta = Math.floor(p.bet * 1.5);
+        else if (dBJ) delta = -p.bet;
+        else if (d > 21 || v > d) delta = p.bet;
+        else if (v === d) delta = 0;
+        else delta = -p.bet;
+        p.chips += delta;
+        p.result = delta > 0 ? `${bj ? 'blackjack! ' : 'win '}+${delta}` : delta < 0 ? (v > 21 ? `bust −${-delta}` : `lose −${-delta}`) : 'push';
+        p.resultCls = delta > 0 ? 'win' : delta < 0 ? 'lose' : 'push';
+        p.bet = 0;
+      });
+      phase = 'done';
+      render();
+    }
+
+    function nextHand() {
+      players.forEach(p => {
+        p.cards = []; p.result = ''; p.resultCls = ''; p.bet = 0;
+        if (p.chips < MIN_BET) p.out = true;
+      });
+      dealer = [];
+      phase = 'bet';
+      render();
+    }
+
+    function finish() {
+      YLN.podium('blackjack', players.map(p => ({ player: p, score: p.chips, display: `${p.chips.toLocaleString()} chips` })), { onAgain: start });
+    }
+
+    async function start() {
+      const { players: ps, settings } = await YLN.setupPlayers({
+        game: 'blackjack', min: 1, max: 6,
+        intro: `Everyone starts with ${START.toLocaleString()} chips.`,
+        options: [{ key: 'hands', label: 'how many hands?', value: 10, choices: [{ value: 5, label: '5 quick' }, { value: 10, label: '10' }, { value: 20, label: '20 long' }] }],
+      });
+      totalHands = settings.hands;
+      players = ps.map(p => ({ ...p, chips: START, bet: 0, lastBet: 0, cards: [], out: false }));
+      dealer = []; hand = 0; phase = 'bet'; turn = -1;
+      newShoe();
+      render();
+    }
+
+    $('newGame').onclick = start;
+    $('endNow').onclick = () => { if (players.length && phase !== 'dealing' && phase !== 'dealer') finish(); };
+    start();
+  })();
+  </script>
+</body>
+</html>

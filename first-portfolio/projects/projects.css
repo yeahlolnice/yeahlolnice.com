@@ -1,0 +1,55 @@
+section{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+}
+.projecttxt{
+    color: white;
+}
+.sectiontitle{
+    color: white;
+    font-size: 2em;
+    margin-bottom: 20px;
+}
+.projectbox{
+    background-color: #333;
+    width: 50%;
+    border-radius: 7%;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+.thumbnail{
+    width: 40%;
+    float: left;
+    margin-right: 10px;
+    border-radius: 7%;
+}
+/* blows up the picture when you click on it  */
+.lightbox {
+	display: none;
+	position: fixed;
+	z-index: 300;
+	width: 100%;
+	height: 100%;
+	text-align: center;
+	top: 1%;
+	left: 1%;
+	background: rgba(0,0,0,0.8);
+}
+.lightbox img {
+	/* Pad the lightbox image */
+	max-width: 90%;
+	max-height: 80%;
+	margin-top: 2%;
+}
+/* Unhide lightbox **/
+.lightbox:target {
+	outline: none;
+	display: block;
+}
+@media screen and (min-width: 1000px){
+    .projecttxt{
+        font-size: 1.5em;
+    }
+}

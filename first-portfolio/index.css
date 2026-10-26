@@ -1,0 +1,46 @@
+.container{
+    display: flex;
+    flex-direction: column;
+    align-items: center;   
+}
+.displayimage{
+    display: flex;
+    height: 200px;
+    width: auto;
+}
+.imgContainer{
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    animation-name: displayfade;
+    animation-duration: 2s;
+}
+/* fade in on load up */
+@keyframes displayfade{
+    0%{
+        opacity: 0%;
+    }
+    100%{
+        opacity: 100%;
+    }
+}
+.aboutContainer{
+    background-color: #333;
+    border-radius: 8%;
+    padding: 10px;
+    margin: 5% 15%;
+    box-shadow: 2px 5px 7px black;
+    animation: displayfade 2s;
+}
+.abouttxt{
+    display: flex;
+    flex-wrap: wrap;
+    padding: 10px;
+    overflow: hidden;
+    color:white;
+}
+@media screen and (min-width: 700px){
+    .abouttxt{
+        font-size: 1.5em;
+    }
+}

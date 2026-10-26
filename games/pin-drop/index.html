@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pin Drop | yeahlolnice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link rel="stylesheet" href="/content/style.css" />
+  <link rel="stylesheet" href="/games/shared/games.css" />
+  <style>
+    .prompt { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-bottom: none; border-radius: var(--radius) var(--radius) 0 0; padding: 18px 22px; }
+    .prompt .where { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(1.4rem, 3.4vw, 2.2rem); letter-spacing: -0.02em; line-height: 1.05; }
+    .prompt .where span { color: var(--accent); }
+    #map { height: 62vh; min-height: 380px; border: 1px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); background: #0b0b0b; cursor: crosshair; }
+    #map:focus, .leaflet-container:focus { outline: none; }
+    .leaflet-container { font-family: 'DM Mono', monospace; background: #0b0b0b; }
+    .leaflet-container.leaflet-grab { cursor: crosshair; }
+    .leaflet-control-attribution { background: rgba(14,14,14,.8) !important; color: var(--muted) !important; font-size: 9px; }
+    .leaflet-control-attribution a { color: var(--muted) !important; }
+    .leaflet-bar a { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+    .leaflet-tooltip.pin-tip { background: var(--surface); color: var(--text); border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 11px; box-shadow: none; }
+    .leaflet-tooltip.pin-tip::before { display: none; }
+    .target-icon { font-size: 26px; line-height: 26px; text-align: center; filter: drop-shadow(0 0 8px rgba(240,75,138,.9)); }
+    .results { margin-top: 18px; }
+    .results table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .results td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .results td.r { text-align: right; }
+    .results .nm { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; }
+    .results .pts { color: var(--accent); }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+    .maperr { padding: 40px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <a class="back" href="/games/">← games night</a>
+    <div class="actions"><button class="btn small" id="newGame">new game</button></div>
+  </nav>
+
+  <section class="game-head">
+    <h1>pin <span>drop</span></h1>
+    <p class="desc">A place pops up. Everyone takes a secret turn to <strong>click where they think it is</strong> on a map with no labels. Up to 5,000 points a round, less the further off you are.</p>
+  </section>
+
+  <main class="stage">
+    <div id="scorebar"></div>
+    <div class="prompt">
+      <div>
+        <div class="label" id="roundLbl"></div>
+        <div class="where" id="where">…</div>
+      </div>
+      <span class="spacer"></span>
+      <span class="label" id="hint"></span>
+      <button class="btn accent big" id="lock" disabled>lock it in<span class="kbd">enter</span></button>
+    </div>
+    <div id="map"></div>
+    <div class="results" id="results"></div>
+  </main>
+
+  <footer>made with too much coffee · yeahlolnice.com</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="/games/shared/games.js"></script>
+  <script src="places.js"></script>
+  <script>
+  (() => {
+    const $ = id => document.getElementById(id);
+    if (!window.L) {
+      $('map').innerHTML = '<div class="maperr">The map library didn\'t load. Check the internet connection and refresh.</div>';
+      return;
+    }
+
+    const map = L.map('map', { worldCopyJump: true, minZoom: 2, maxZoom: 10, zoomSnap: 0.5, attributionControl: true })
+      .setView([20, 10], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    }).addTo(map);
+    const layer = L.layerGroup().addTo(map);
+
+    let players = [], scores = [], rounds = 5, round = 0, turn = 0, phase = 'idle', place = null, deck = [], guesses = [], pin = null;
+
+    const wrapLng = lng => ((lng + 540) % 360) - 180;
+    function km(a, b) {
+      const R = 6371, rad = Math.PI / 180;
+      const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+    const points = d => d < 25 ? 5000 : Math.round(5000 * Math.exp(-d / 2000));
+    const fmtKm = d => d < 10 ? d.toFixed(1) + ' km' : Math.round(d).toLocaleString() + ' km';
+
+    function bar(active = -1) {
+      YLN.scorebar($('scorebar'), players, { active, score: (p, i) => `${scores[i].toLocaleString()} pts` });
+    }
+
+    async function nextRound() {
+      if (round >= rounds) return finish();
+      place = deck.pop();
+      guesses = [];
+      turn = 0;
+      $('results').innerHTML = '';
+      document.querySelector('.prompt').scrollIntoView({ block: 'nearest' });
+      $('roundLbl').textContent = `round ${round + 1} of ${rounds} · where is`;
+      $('where').innerHTML = YLN.esc(place.n);
+      playerTurn();
+    }
+
+    async function playerTurn() {
+      const p = players[turn];
+      layer.clearLayers(); pin = null;
+      map.setView([20, 10], 2, { animate: false });
+      phase = 'wait';
+      bar(turn);
+      $('lock').disabled = true;
+      $('hint').innerHTML = `<span style="color:${p.color}">${YLN.esc(p.name)}</span>, click the map`;
+      if (players.length > 1) await YLN.handoff(p, { title: 'your turn', sub: `Where is <b style="color:var(--text)">${YLN.esc(place.n)}</b>?<br>Everyone else, no pointing 👀` });
+      phase = 'guess';
+      map.invalidateSize();
+    }
+
+    map.on('click', e => {
+      if (phase !== 'guess') return;
+      const p = players[turn];
+      const ll = L.latLng(e.latlng.lat, e.latlng.lng);
+      if (pin) pin.setLatLng(ll);
+      else pin = L.circleMarker(ll, { radius: 9, color: '#0e0e0e', weight: 2, fillColor: p.color, fillOpacity: 1 }).addTo(layer);
+      $('lock').disabled = false;
+    });
+
+    function lockIn() {
+      if (phase !== 'guess' || !pin) return;
+      const ll = pin.getLatLng();
+      guesses[turn] = { lat: ll.lat, lng: wrapLng(ll.lng) };
+      turn++;
+      if (turn < players.length) playerTurn();
+      else reveal();
+    }
+    $('lock').onclick = lockIn;
+    document.addEventListener('keydown', e => {
+      if (document.querySelector('.overlay')) return;
+      if (e.key === 'Enter') { e.preventDefault(); if (phase === 'guess') lockIn(); else if (phase === 'reveal') $('next')?.click(); }
+    });
+
+    function reveal() {
+      phase = 'reveal';
+      layer.clearLayers();
+      $('lock').disabled = true;
+      $('hint').textContent = '';
+      const target = L.latLng(place.lat, place.lng);
+      const bounds = L.latLngBounds([target]);
+      const res = players.map((p, i) => {
+        const g = guesses[i];
+        const d = km(g, place);
+        // draw the guess on the same "copy" of the world as the target so lines go the short way
+        let lng = g.lng;
+        while (lng - place.lng > 180) lng -= 360;
+        while (place.lng - lng > 180) lng += 360;
+        const gl = L.latLng(g.lat, lng);
+        L.polyline([gl, target], { color: p.color, weight: 2, dashArray: '6 6', opacity: .8 }).addTo(layer);
+        L.circleMarker(gl, { radius: 8, color: '#0e0e0e', weight: 2, fillColor: p.color, fillOpacity: 1 })
+          .bindTooltip(`${YLN.esc(p.name)} · ${fmtKm(d)}`, { permanent: true, direction: 'top', className: 'pin-tip', offset: [0, -8] })
+          .addTo(layer);
+        bounds.extend(gl);
+        const pts = points(d);
+        scores[i] += pts;
+        return { p, d, pts };
+      });
+      L.marker(target, { icon: L.divIcon({ className: 'target-icon', html: '★', iconSize: [26, 26], iconAnchor: [13, 13] }) })
+        .bindTooltip(YLN.esc(place.n), { permanent: true, direction: 'bottom', className: 'pin-tip', offset: [0, 10] })
+        .addTo(layer);
+      map.fitBounds(bounds.pad(0.25), { maxZoom: 6 });
+      bar();
+      res.sort((a, b) => a.d - b.d);
+      round++;
+      $('results').innerHTML = `<table>${res.map((r, i) => `<tr>
+          <td style="width:28px" class="muted">${i + 1}</td>
+          <td><span class="dot" style="background:${r.p.color}"></span><span class="nm">${YLN.esc(r.p.name)}</span></td>
+          <td class="r muted">${fmtKm(r.d)} off</td>
+          <td class="r pts">+${r.pts.toLocaleString()}</td></tr>`).join('')}</table>
+        <div class="row" style="margin-top:16px"><span class="spacer"></span><button class="btn accent big" id="next">${round >= rounds ? 'final scores →' : 'next place →'}</button></div>`;
+      $('next').onclick = nextRound;
+      $('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function finish() {
+      phase = 'idle';
+      YLN.podium('pin-drop', players.map((p, i) => ({ player: p, score: scores[i], display: `${scores[i].toLocaleString()} pts` })), { onAgain: start });
+    }
+
+    async function start() {
+      layer.clearLayers();
+      const { players: ps, settings } = await YLN.setupPlayers({
+        game: 'pin-drop', min: 1, max: 8,
+        options: [{ key: 'rounds', label: 'how many places?', value: 5, choices: [{ value: 3, label: '3' }, { value: 5, label: '5' }, { value: 10, label: '10' }] }],
+      });
+      players = ps; scores = ps.map(() => 0); rounds = settings.rounds; round = 0;
+      deck = YLN.shuffle([...PLACES]);
+      nextRound();
+    }
+    $('newGame').onclick = start;
+    start();
+  })();
+  </script>
+</body>
+</html>
