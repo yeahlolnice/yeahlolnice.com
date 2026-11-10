@@ -8,40 +8,98 @@
   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
   })(window,document,'script','dataLayer','GTM-W5SZSFFV');</script>
   <!-- End Google Tag Manager -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS Paint | yeahlolnice</title>
-    <link rel="stylesheet" href="main.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JS Paint | yeahlolnice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/content/style.css" />
+  <link rel="stylesheet" href="main.css" />
 </head>
-<body>
+<body class="paint">
   <!-- Google Tag Manager (noscript) -->
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W5SZSFFV"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
-    <div class="painter">
-        <canvas width="1000px" height="600px" id="paint"></canvas>
-        <div id="options">
-            <button class="btn btn-danger" onclick="Clear()">Clear</button>
-            <div class="sliders">
-                <div class="slidecontainer">
-                    Red:
-                    <input type="range" min="0" max="255" value="0" class="slider" id="redSlider">
-                    <span id="redVal"></span>
-                </div>
-                <div class="slidecontainer">
-                    Green:
-                    <input type="range" min="0" max="255" value="0" class="slider" id="greenSlider">
-                    <span id="greenVal"></span>
-                </div>
-                <div class="slidecontainer">
-                    Blue:
-                    <input type="range" min="0" max="255" value="0" class="slider" id="blueSlider">
-                    <span id="blueVal"></span>
-                </div> 
-            </div>
-        </div>
+
+  <nav class="topbar">
+    <a class="back" href="/">← yeahlolnice</a>
+    <h1 class="title">js <span>paint</span></h1>
+    <div class="actions">
+      <button class="btn" id="undo" title="Undo (Ctrl+Z)">↶ undo</button>
+      <button class="btn" id="redo" title="Redo (Ctrl+Shift+Z)">↷ redo</button>
+      <button class="btn pink" id="clear" title="Clear the board (undoable)">clear</button>
+      <button class="btn accent" id="save" title="Save as PNG (Ctrl+S)">save png</button>
     </div>
-    <script defer src="main.js"></script>
+  </nav>
+
+  <div class="toolbar" role="toolbar" aria-label="Drawing tools">
+    <div class="group" aria-label="Tools">
+      <button class="tool" data-tool="pen" title="Pen (P)" aria-label="Pen">
+        <svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg><span class="key">P</span>
+      </button>
+      <button class="tool" data-tool="highlighter" title="Highlighter (H)" aria-label="Highlighter">
+        <svg viewBox="0 0 24 24"><path d="M9 14l7-9 4 3-7 9z"/><path d="M9 14l-1 3 2 1 3-1"/><path d="M4 21h9" class="thick"/></svg><span class="key">H</span>
+      </button>
+      <button class="tool" data-tool="line" title="Line (L) · hold Shift to snap" aria-label="Line">
+        <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg><span class="key">L</span>
+      </button>
+      <button class="tool" data-tool="arrow" title="Arrow (A) · hold Shift to snap" aria-label="Arrow">
+        <svg viewBox="0 0 24 24"><path d="M5 19L18 6"/><path d="M10 5h9v9"/></svg><span class="key">A</span>
+      </button>
+      <button class="tool" data-tool="rect" title="Box (R) · hold Shift for a square" aria-label="Box">
+        <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg><span class="key">R</span>
+      </button>
+      <button class="tool" data-tool="ellipse" title="Ellipse (O) · hold Shift for a circle" aria-label="Ellipse">
+        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8.5" ry="6.5"/></svg><span class="key">O</span>
+      </button>
+      <button class="tool" data-tool="text" title="Text (T)" aria-label="Text">
+        <svg viewBox="0 0 24 24"><path d="M5 7V4h14v3"/><path d="M12 4v16"/><path d="M9 20h6"/></svg><span class="key">T</span>
+      </button>
+      <button class="tool" data-tool="eraser" title="Eraser (E)" aria-label="Eraser">
+        <svg viewBox="0 0 24 24"><path d="M9 20l-5-5L14 5l6 6-9 9z"/><path d="M9 20h11"/><path d="M8 11l6 6"/></svg><span class="key">E</span>
+      </button>
+      <button class="tool" data-tool="laser" title="Laser pointer (K) · fades away, never drawn" aria-label="Laser pointer">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" class="fill"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg><span class="key">K</span>
+      </button>
+    </div>
+
+    <div class="group" aria-label="Colours">
+      <button class="swatch" data-color="ink" title="Ink (1)" aria-label="Ink"><i></i></button>
+      <button class="swatch" data-color="lime" title="Lime (2)" aria-label="Lime"><i></i></button>
+      <button class="swatch" data-color="pink" title="Pink (3)" aria-label="Pink"><i></i></button>
+      <button class="swatch" data-color="cyan" title="Cyan (4)" aria-label="Cyan"><i></i></button>
+      <button class="swatch" data-color="gold" title="Gold (5)" aria-label="Gold"><i></i></button>
+      <label class="swatch custom" data-color="custom" title="Custom colour (6)">
+        <input type="color" id="customColor" aria-label="Custom colour" /><i></i>
+      </label>
+    </div>
+
+    <div class="group" aria-label="Sizes">
+      <button class="size" data-size="0" title="Small ([ and ] to change)" aria-label="Small"><i></i></button>
+      <button class="size" data-size="1" title="Medium" aria-label="Medium"><i></i></button>
+      <button class="size" data-size="2" title="Large" aria-label="Large"><i></i></button>
+      <button class="size" data-size="3" title="Extra large" aria-label="Extra large"><i></i></button>
+    </div>
+
+    <div class="group plain" aria-label="Board">
+      <button class="btn small" id="theme" title="Board colour (B)">dark board</button>
+      <button class="btn small" id="pattern" title="Board pattern (G)">grid</button>
+    </div>
+  </div>
+
+  <main class="board-wrap" id="boardWrap">
+    <canvas id="board"></canvas>
+    <canvas id="overlay"></canvas>
+    <div class="ring" id="ring"></div>
+    <div class="toast" id="toast" role="status"></div>
+  </main>
+
+  <footer class="status">
+    <span id="status"></span>
+    <span class="hints">P pen · H highlight · L line · A arrow · R box · O ellipse · T text · E erase · K laser · 1–6 colour · [ ] size · shift = straight / square</span>
+  </footer>
+
+  <script src="main.js"></script>
 </body>
 </html>
