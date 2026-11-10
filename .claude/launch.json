@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "site",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:\\Users\\User\\AppData\\Local\\Temp\\claude\\e281529fa7e906d2\\786a9d49-be30-449e-a171-7c0bd029d0fc\\scratchpad\\serve.js", ".", "8080"],
+      "port": 8080
+    }
+  ]
+}

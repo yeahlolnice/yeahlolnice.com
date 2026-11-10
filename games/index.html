@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-W5SZSFFV');</script>
+  <!-- End Google Tag Manager -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>games night | yeahlolnice</title>
@@ -23,7 +30,7 @@
     .hub .card:nth-child(3) .thumb-inner { background: linear-gradient(135deg, #12091a 0%, #24103a 50%, #120a1f 100%); }
     .hub .card:nth-child(4) .thumb-inner { background: linear-gradient(135deg, #0a0f1a 0%, #0f1f33 50%, #0a1220 100%); }
     .hub .card:nth-child(5) .thumb-inner { background: linear-gradient(135deg, #0f1a0a 0%, #1f3310 50%, #0f1a0a 100%); }
-    .hub .card:nth-child(6) .thumb-inner { background: linear-gradient(135deg, #141414 0%, #1c1c1c 50%, #141414 100%); }
+    .hub .card:nth-child(6) .thumb-inner { background: linear-gradient(135deg, #0a1a1a 0%, #0f3330 50%, #0a1a18 100%); }
     .card.soon { cursor: default; }
     .card.soon:hover { border-color: var(--border); background: var(--surface); }
     .card.soon .thumb-icon { opacity: .35; filter: none; }
@@ -46,6 +53,10 @@
   </style>
 </head>
 <body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W5SZSFFV"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
 
   <header>
     <p class="eyebrow">// <a href="/">yeahlolnice.com</a> / games</p>
@@ -123,17 +134,17 @@
       </div>
     </a>
 
-    <div class="card soon">
+    <a class="card" href="/games/lucky-lap/">
       <div class="thumb">
-        <div class="thumb-inner"><div class="thumb-grid"></div><span class="thumb-icon">🚧</span></div>
-        <span class="tag">soon</span>
+        <div class="thumb-inner"><div class="thumb-grid"></div><span class="thumb-icon">🎲</span></div>
+        <span class="tag">board game</span>
       </div>
       <div class="card-body">
-        <div class="card-meta"><span class="num">06 — ???</span><span class="arrow" style="color:var(--muted)">…</span></div>
-        <h2 class="card-title">Next one</h2>
-        <p class="card-text">Mini golf? Wordle duel? Trivia golf? Something's getting built here next.</p>
+        <div class="card-meta"><span class="num">06 — 1–6 players + bots</span><span class="arrow">↗</span></div>
+        <h2 class="card-title">Lucky Lap</h2>
+        <p class="card-text">Race round the loop. Roll two dice, move by one, dodge the pits and snakes. Items, chance cards and a lot of bumping.</p>
       </div>
-    </div>
+    </a>
 
   </div>
 
@@ -149,7 +160,7 @@
 
   <script src="/games/shared/games.js"></script>
   <script>
-    const GAMES = ['blackjack', 'roulette', 'trivia', 'pin-drop', 'life'];
+    const GAMES = ['blackjack', 'roulette', 'trivia', 'pin-drop', 'life', 'lucky-lap'];
     function drawHof() {
       const box = document.getElementById('hof');
       const h = YLN.hof();

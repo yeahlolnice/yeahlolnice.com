@@ -1,14 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-W5SZSFFV');</script>
+  <!-- End Google Tag Manager -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>yeahlolnice.com</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/content/style.css" />
+  <style>
+    /* 5th card: fades in last and spans the full row as a wide card */
+    .card:nth-child(5) { animation: fadeUp 0.5s 0.8s ease forwards; }
+    .card:nth-child(5) .thumb-inner { background: linear-gradient(135deg, #12091a 0%, #24103a 50%, #120a1f 100%); }
+    @media (min-width: 601px) {
+      .card:nth-child(3),
+      .card:nth-child(4) { border-radius: 0; }
+      .card:nth-child(5) { grid-column: 1 / -1; flex-direction: row; border-radius: 0 0 var(--radius) var(--radius); }
+      .card:nth-child(5) .thumb { flex: 0 0 calc(50% - 1px); }
+    }
+    @media (max-width: 600px) {
+      .card:nth-child(4) { border-radius: 0; }
+      .card:nth-child(5) { border-radius: 0 0 var(--radius) var(--radius); }
+    }
+  </style>
 </head>
 <body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W5SZSFFV"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
 
   <header>
     <p class="eyebrow">// yeahlolnice.com</p>
@@ -95,6 +121,24 @@
         </div>
         <h2 class="card-title">Games Night</h2>
         <p class="card-text">Pass-the-mouse party games for one PC. Blackjack, roulette, trivia, a map pin drop and Conway's Game of Life.</p>
+      </div>
+    </a>
+
+    <a class="card" href="https://softwarefactory.yeahlolnice.com/">
+      <div class="thumb">
+        <div class="thumb-inner">
+          <div class="thumb-grid"></div>
+          <span class="thumb-icon">🏭</span>
+        </div>
+        <span class="tag">tool</span>
+      </div>
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="num">05 — 2026</span>
+          <span class="arrow">↗</span>
+        </div>
+        <h2 class="card-title">SoftwareFactory</h2>
+        <p class="card-text">An AI orchestration tool for software development. Coordinates AI agents to plan, build and ship code.</p>
       </div>
     </a>
 

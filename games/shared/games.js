@@ -13,6 +13,7 @@ const YLN = (() => {
     trivia: 'Trivia Night',
     'pin-drop': 'Pin Drop',
     life: 'Colony Clash',
+    'lucky-lap': 'Lucky Lap',
   };
 
   // ── storage (never trust it to exist) ──
@@ -167,7 +168,8 @@ const YLN = (() => {
     const sorted = [...results].sort((a, b) => lowerWins ? a.score - b.score : b.score - a.score);
     const best = sorted[0].score;
     const winners = sorted.filter(r => r.score === best);
-    if (results.length > 1 || game === 'life') recordWin(game, winners.map(w => w.player.name));
+    // bots don't get a spot in the hall of fame
+    if (results.length > 1 || game === 'life') recordWin(game, winners.filter(w => !w.player.bot).map(w => w.player.name));
     confetti(winners[0].player.color);
 
     const top = sorted.slice(0, 3);

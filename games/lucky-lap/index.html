@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-W5SZSFFV');</script>
+  <!-- End Google Tag Manager -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lucky Lap | yeahlolnice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/content/style.css" />
+  <link rel="stylesheet" href="/games/shared/games.css" />
+  <style>
+    /* ── board: 11×11 grid, 40 tiles round the edge, hud in the middle ── */
+    .board {
+      --w: min(820px, calc(100vw - 96px));
+      --g: 3px;
+      --c: calc((var(--w) - 10 * var(--g)) / 11);
+      position: relative;
+      width: var(--w);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(11, var(--c));
+      grid-template-rows: repeat(11, var(--c));
+      gap: var(--g);
+    }
+    .tile {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding-top: calc(var(--c) * .08);
+      font-size: calc(var(--c) * .36);
+      line-height: 1;
+      user-select: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .tile.k-good { background: rgba(200,240,75,.06); border-color: rgba(200,240,75,.28); }
+    .tile.k-bad { background: rgba(240,75,138,.07); border-color: rgba(240,75,138,.3); }
+    .tile.k-chaos { background: rgba(75,200,240,.06); border-color: rgba(75,200,240,.28); }
+    .tile.k-start { background: var(--accent); border-color: var(--accent); }
+    .tile.pv { border-color: var(--pc); box-shadow: inset 0 0 0 2px var(--pc), 0 0 18px -4px var(--pc); cursor: pointer; z-index: 2; }
+    .tile.pv::after {
+      content: attr(data-pv);
+      position: absolute; top: -8px; right: -5px;
+      background: var(--pc); color: #0e0e0e;
+      font: 700 10px 'DM Mono', monospace;
+      padding: 2px 5px; border-radius: 2px;
+    }
+
+    .token {
+      position: absolute; left: 0; top: 0;
+      width: calc(var(--c) * .27); height: calc(var(--c) * .27);
+      border-radius: 50%;
+      background: var(--pc);
+      border: 2px solid var(--bg);
+      z-index: 4;
+      pointer-events: none;
+      transition: transform .16s ease, box-shadow .2s;
+    }
+    .token.on { box-shadow: 0 0 0 2px var(--pc), 0 0 14px var(--pc); z-index: 5; }
+    .token.warp { transition: transform .55s cubic-bezier(.5,-0.4,.5,1.4); }
+
+    .mid-logo { display: none; }
+    .hud {
+      grid-area: 2 / 2 / 11 / 11;
+      padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 14px;
+      min-height: 0; overflow: auto;
+    }
+    .hud .who { font: 800 clamp(22px, 3.2vw, 34px)/1 'Syne', sans-serif; letter-spacing: -.02em; color: var(--pc); margin-top: 6px; }
+    .dice { display: flex; gap: 18px; min-height: 96px; align-items: flex-start; flex-wrap: wrap; }
+    .dwrap { display: grid; grid-template-columns: 26px auto 26px; align-items: center; gap: 6px; justify-items: center; }
+    .die {
+      width: 64px; height: 64px;
+      font: 800 34px 'Syne', sans-serif;
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 6px;
+    }
+    .die:disabled { color: var(--text); opacity: 1; }
+    .die.pick { border-color: var(--pc); }
+    .die.pick:not(:disabled) { cursor: pointer; }
+    .die.pick:not(:disabled):hover { background: var(--pc); color: #0e0e0e; }
+    .die.rolling { color: var(--muted); }
+    .nudge {
+      width: 26px; height: 26px;
+      font-family: 'DM Mono', monospace; font-size: 14px;
+      background: var(--surface); color: var(--accent);
+      border: 1px solid var(--border); border-radius: 2px; cursor: pointer;
+    }
+    .nudge:hover:not(:disabled) { border-color: var(--accent); }
+    .nudge:disabled { opacity: .25; cursor: not-allowed; }
+    .land { grid-column: 1 / -1; font-size: 11px; color: var(--muted); min-height: 14px; text-align: center; white-space: nowrap; }
+    #actions { display: flex; gap: 8px; flex-wrap: wrap; min-height: 40px; }
+    .hint { font-size: 12px; line-height: 1.6; color: var(--muted); min-height: 1.6em; }
+    .hint b, .log b { font-weight: 400; }
+    .chance { display: inline-block; border: 1px solid var(--cyan); background: rgba(75,200,240,.06); padding: 10px 14px; border-radius: 2px; color: var(--text); }
+    .chance .t { font: 800 16px 'Syne', sans-serif; color: var(--cyan); }
+    .log { list-style: none; font-size: 11px; line-height: 1.7; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; flex: 1; min-height: 60px; overflow: auto; }
+    .log li:first-child { color: var(--text); }
+
+    /* legend */
+    .legend-title { margin: 44px 0 12px; }
+    .legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 2px; }
+    .legend .it { background: var(--surface); border: 1px solid var(--border); padding: 10px 12px; font-size: 11px; line-height: 1.5; display: flex; gap: 10px; align-items: center; color: var(--muted); }
+    .legend .it .ic { font-size: 18px; width: 24px; text-align: center; flex: none; }
+    .legend .it b { color: var(--text); font-weight: 400; display: block; }
+    .legend .it.k-good { border-left: 3px solid var(--accent); }
+    .legend .it.k-bad { border-left: 3px solid var(--accent2); }
+    .legend .it.k-chaos { border-left: 3px solid var(--cyan); }
+
+    /* dice 21 tiebreak */
+    .d21 .rowp { display: grid; grid-template-columns: 1fr auto 56px; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); background: var(--bg); margin-top: 4px; font-size: 13px; }
+    .d21 .rowp.on { border-color: var(--pc); }
+    .d21 .tot { font: 800 18px 'Syne', sans-serif; text-align: right; }
+    .d21 .rolls { color: var(--muted); font-size: 11px; }
+
+    @media (max-width: 720px) {
+      .board { --w: calc(100vw - 32px); --g: 2px; grid-template-rows: repeat(11, var(--c)) auto; }
+      .mid-logo {
+        display: flex; grid-area: 2 / 2 / 11 / 11;
+        align-items: center; justify-content: center; text-align: center;
+        font: 800 clamp(28px, 11vw, 48px)/.9 'Syne', sans-serif; letter-spacing: -.03em;
+        color: var(--surface2);
+      }
+      .hud { grid-area: 12 / 1 / 13 / 12; margin-top: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; overflow: visible; }
+      .die { width: 52px; height: 52px; font-size: 28px; }
+      .log { max-height: 180px; }
+      .tile.pv::after { font-size: 8px; padding: 1px 3px; top: -6px; right: -3px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W5SZSFFV"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+  <nav class="topbar">
+    <a class="back" href="/games/">← games night</a>
+    <div class="actions"><button class="btn small" id="newGame">new game</button></div>
+  </nav>
+
+  <section class="game-head">
+    <h1>lucky <span>lap</span></h1>
+    <p class="desc">Race round the loop. Roll two dice, then move by <strong>one</strong> of them, so you can dodge the nasty tiles.
+      Spend 🍀 to reroll or nudge a die. First across the line wins. Everyone else ranks by how close they got.
+      <span class="kbd">space</span> rolls.</p>
+  </section>
+
+  <main class="stage">
+    <div id="scorebar"></div>
+    <div class="board" id="board">
+      <div class="mid-logo">lucky<br>lap</div>
+      <div class="hud" id="hud">
+        <div><div class="label" id="meta"></div><div class="who" id="who"></div></div>
+        <div class="dice" id="dice"></div>
+        <div id="actions"></div>
+        <div class="hint" id="hint"></div>
+        <ul class="log" id="log"></ul>
+      </div>
+    </div>
+
+    <p class="label legend-title">tiles</p>
+    <div class="legend" id="legendTiles"></div>
+    <p class="label legend-title">items <span class="muted">· hold 2 · use before you roll · whoever's behind gets the nastier stuff</span></p>
+    <div class="legend" id="legendItems"></div>
+  </main>
+
+  <footer>made with too much coffee · yeahlolnice.com</footer>
+
+  <script src="/games/shared/games.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
